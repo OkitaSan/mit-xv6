@@ -57,6 +57,13 @@ ls(char *path)
     while(read(fd, &de, sizeof(de)) == sizeof(de)){
       if(de.inum == 0)
         continue;
+      //the myth of how ls list all the file in this directory is here:
+      //  current_directory/file
+      //  |                 |
+      //  |                 |
+      // buf                p
+      // p receives the file name and sends it to p
+      // fmtname reads the '/file' path (you can see the definition of fmt above) and print it to the console
       memmove(p, de.name, DIRSIZ);
       p[DIRSIZ] = 0;
       if(stat(buf, &st) < 0){
