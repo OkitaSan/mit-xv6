@@ -48,6 +48,7 @@ int main(int argc, char **argv)
         // get all of the number from father , normally exits
         exit(0);
     }
+    // IMPORTANT:YOU SHOULD NOTICE THAT IF YOUR DO NOT CLOSE THIS WRITE END BEFORE YOU FORKED A NEW PROCESS,THE READ WILL BE BLOCKED FOREVER!!!
     close(three_to_five[1]);
     if (fork() == 0)
     {
@@ -70,6 +71,7 @@ int main(int argc, char **argv)
         exit(0);
         // get all of the number from father , normally exits
     }
+    // IMPORTANT:YOU SHOULD NOTICE THAT IF YOUR DO NOT CLOSE THIS WRITE END BEFORE YOU FORKED A NEW PROCESS,THE READ WILL BE BLOCKED FOREVER!!!
     close(five_to_seven[1]);
     if (fork() == 0)
     {
