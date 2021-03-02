@@ -20,9 +20,12 @@ int main(int argc, char **argv)
 
     for (int i = 2; i <= 35; i++)
     {
-        if(i == 2||i % 2 != 0)
-        write(two_to_three[1], &i, 4);
+        if (i == 2 || i % 2 != 0)
+            write(two_to_three[1], &i, 4);
     }
+    // IMPORTANT:YOU SHOULD NOTICE THAT IF YOUR DO NOT CLOSE THIS WRITE END BEFORE YOU FORKED A NEW PROCESS,THE READ WILL BE BLOCKED FOREVER!!!
+    close(two_to_three[1]);
+
     // send all numbers , and then wait all child process to exit
     if (fork() == 0)
     {
@@ -30,50 +33,66 @@ int main(int argc, char **argv)
         close(0);
         close(1);
         int receiver;
+        //close(two_to_three[1]);
         // the 3 process
         while (read(two_to_three[0], &receiver, 4) != 0)
         {
-            if (receiver == 3||receiver % 3 != 0)
+            if (receiver == 3 || receiver % 3 != 0)
             {
                 write(three_to_five[1], &receiver, 4);
             }
         }
-        exit(0);
+        close(three_to_five[1]);
+
+        close(five_to_seven[1]);
         // get all of the number from father , normally exits
+        exit(0);
     }
+    close(three_to_five[1]);
     if (fork() == 0)
     {
         // close the unneeded fd so that the system won't out of resource
         close(0);
-        close(1);
+        //close(1);
         int receiver;
+        //close(three_to_five[1]);
         // the 5 process
         while (read(three_to_five[0], &receiver, 4) != 0)
         {
-            if (receiver == 5||receiver % 5 != 0)
+            if (receiver == 5 || receiver % 5 != 0)
             {
                 write(five_to_seven[1], &receiver, 4);
             }
         }
+        close(five_to_seven[1]);
+        close(two_to_three[1]);
+
         exit(0);
         // get all of the number from father , normally exits
     }
+    close(five_to_seven[1]);
     if (fork() == 0)
     {
         // close the unneeded fd so that the system won't out of resource
         close(0);
         int receiver;
+        //close(five_to_seven[1]);
         // the 7 process
         while (read(five_to_seven[0], &receiver, 4) != 0)
         {
-            if (receiver == 7 ||receiver % 7 != 0)
+            if (receiver == 7 || receiver % 7 != 0)
             {
-                printf("prime %d\n",receiver);
+                printf("prime %d\n", receiver);
             }
         }
-        exit(0);
+        close(two_to_three[1]);
+        close(three_to_five[1]);
+
         // get all of the number from father , normally exits
     }
-    wait(0);
+
+    wait((int *)0);
+    wait((int *)0);
+    wait((int *)0);
     exit(0);
 }
