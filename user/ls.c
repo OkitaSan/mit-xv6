@@ -55,6 +55,7 @@ ls(char *path)
     p = buf+strlen(buf);
     *p++ = '/';
     while(read(fd, &de, sizeof(de)) == sizeof(de)){
+      printf("%d %s\n",de.inum,de.name);
       if(de.inum == 0)
         continue;
       //the myth of how ls list all the file in this directory is here:
