@@ -289,6 +289,8 @@ fork(void)
       np->ofile[i] = filedup(p->ofile[i]);
   np->cwd = idup(p->cwd);
 
+  //copy the trace mask
+  np -> trace_mask = p -> trace_mask;
   safestrcpy(np->name, p->name, sizeof(p->name));
 
   pid = np->pid;
