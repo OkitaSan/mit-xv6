@@ -148,70 +148,70 @@ syscall(void)
       case 2:
         syscall_name = "exit";
         break;
-case 3:
+      case 3:
         syscall_name = "wait";
         break;
-case 4:
+      case 4:
         syscall_name = "pipe";
         break;
-case 5:
+      case 5:
         syscall_name = "read";
         break;
-case 6:
+      case 6:
         syscall_name = "kill";
         break;
-case 7:
+      case 7:
         syscall_name = "exec";
         break;
-case 8:
+      case 8:
         syscall_name = "fstat";
         break;
-case 9:
+      case 9:
         syscall_name = "chdir";
         break;
-case 10:
+      case 10:
         syscall_name = "dup";
         break;
-case 11:
+      case 11:
         syscall_name = "getpid";
         break;
-case 12:
+      case 12:
         syscall_name = "sbrk";
         break;
-case 13:
+      case 13:
         syscall_name = "sleep";
         break;
-case 14:
+      case 14:
         syscall_name = "uptime";
         break;
-case 15:
+      case 15:
         syscall_name = "open";
         break;
-case 16:
-syscall_name = "write";
-break;
-case 17:
-syscall_name = "mknod";
-break;
-case 18:
-syscall_name = "unlink";
-break;
-case 19:
-syscall_name = "link";
-break;
-case 20:
-syscall_name = "mkdir";
-break;
-case 21:
-syscall_name = "close";
-break;
-case 22:
-syscall_name = "trace";
-break;
-default:
-syscall_name = "unknown";
-break;
-}
+      case 16:
+        syscall_name = "write";
+        break;
+      case 17:
+        syscall_name = "mknod";
+        break;
+      case 18:
+        syscall_name = "unlink";
+        break;
+      case 19:
+        syscall_name = "link";
+        break;
+      case 20:
+        syscall_name = "mkdir";
+        break;
+      case 21:
+        syscall_name = "close";
+        break;
+      case 22:
+        syscall_name = "trace";
+        break;
+      default:
+        syscall_name = "unknown";
+        break;
+      }
     if(mask_result & p -> trace_mask){
       printf("%d: syscall %s -> %d\n",p -> pid,syscall_name,p -> trapframe -> a0);
     }
