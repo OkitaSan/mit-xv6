@@ -80,3 +80,15 @@ kalloc(void)
     memset((char*)r, 5, PGSIZE); // fill with junk
   return (void*)r;
 }
+// count the number of free memory
+uint64 get_number_of_free_memory(void){
+  struct run *r = kmem.freelist;
+  // note that the freelist does not points to the bytes
+  // instead it points to the leaf nodes of pagetable
+  uint64 number = 0;
+  while(r){
+    number++;
+    r = r -> next;
+  }
+  return number * PGSIZE;
+}

@@ -36,6 +36,8 @@ OBJS = \
   $K/kernelvec.o \
   $K/plic.o \
   $K/virtio_disk.o \
+  $K/sysinfo.o \
+# add sysinfo so that the syscall sysinfo can work well
 
 ifeq ($(LAB),pgtbl)
 OBJS += $K/vmcopyin.o
