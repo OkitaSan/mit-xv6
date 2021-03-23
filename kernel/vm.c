@@ -288,7 +288,35 @@ freewalk(pagetable_t pagetable)
   }
   kfree((void*)pagetable);
 }
-
+// print the pagetable of a process.
+void vmprint(pagetable_t pagetable){
+  printf("page table %p\n",pagetable);
+  for(int i = 0; i < 512; i++){
+    pte_t pte = pagetable[i];
+    if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
+      uint64 first_layer_pa = PTE2PA(pte);
+      printf("..%d: pte %p pa %p\n",i,pte,first_layer_pa);
+      // second layer
+      pagetable_t second_base = (pagetable_t)first_layer_pa;
+      for(int j = 0; j < 512; j++){
+        pte_t pte_2 = second_base[j];
+        if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
+          uint64 second_layer_pa = PTE2PA(pte_2);
+          printf(".. ..%d: pte %p pa %p\n",j,pte_2,second_layer_pa);
+          // third layer
+          pagetable_t third_base = (pagetable_t)second_layer_pa;
+          for(int k = 0; k < 512; k++){
+            pte_t pte_3  = third_base[k];
+            if((pte & PTE_V) && (pte & (PTE_R|!PTE_W|PTE_X))&& (pte & (!PTE_R|!PTE_W|PTE_X)) ){
+              uint64 leaf = PTE2PA(pte_3);
+              printf(".. .. ..%d: pte %p pa %p\n",k,pte_3,leaf);
+            }
+          }
+        }
+      }
+    }
+  }
+}
 // Free user memory pages,
 // then free page-table pages.
 void
