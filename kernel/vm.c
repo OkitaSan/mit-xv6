@@ -300,14 +300,14 @@ void vmprint(pagetable_t pagetable){
       pagetable_t second_base = (pagetable_t)first_layer_pa;
       for(int j = 0; j < 512; j++){
         pte_t pte_2 = second_base[j];
-        if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
+        if((pte_2 & PTE_V) && (pte_2 & (PTE_R|PTE_W|PTE_X)) == 0){
           uint64 second_layer_pa = PTE2PA(pte_2);
           printf(".. ..%d: pte %p pa %p\n",j,pte_2,second_layer_pa);
           // third layer
           pagetable_t third_base = (pagetable_t)second_layer_pa;
           for(int k = 0; k < 512; k++){
             pte_t pte_3  = third_base[k];
-            if((pte & PTE_V) && (pte & (PTE_R|!PTE_W|PTE_X))&& (pte & (!PTE_R|!PTE_W|PTE_X)) ){
+            if((pte_3 & PTE_V) && (pte_3 & (PTE_R|!PTE_W|PTE_X)) && (pte_3 & (!PTE_R|!PTE_W|PTE_X)) ){
               uint64 leaf = PTE2PA(pte_3);
               printf(".. .. ..%d: pte %p pa %p\n",k,pte_3,leaf);
             }
