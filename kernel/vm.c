@@ -14,7 +14,7 @@ pagetable_t kernel_pagetable;
 extern char etext[];  // kernel.ld sets this to end of kernel code.
 
 extern char trampoline[]; // trampoline.S
-
+void user_kernel_pagetable_map(pagetable_t kpgtbl,uint64 va,uint64 pa,uint64 sz,int perm);
 /*
  * create a direct-map page table for the kernel.
  */
@@ -46,7 +46,33 @@ kvminit()
   // the highest virtual address in the kernel.
   kvmmap(TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
 }
+// alloc kernel page table for user process
+pagetable_t get_kernel_pagetable_for_user_proc(){
+  pagetable_t kernel_pagetable = uvmcreate();
+  // uart registers
+  user_kernel_pagetable_map(kernel_pagetable,UART0, UART0, PGSIZE, PTE_R | PTE_W);
 
+  // virtio mmio disk interface
+  user_kernel_pagetable_map(kernel_pagetable,VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+
+  // CLINT
+  user_kernel_pagetable_map(kernel_pagetable,CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+
+  // PLIC
+  user_kernel_pagetable_map(kernel_pagetable,PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+
+  // map kernel text executable and read-only.
+  user_kernel_pagetable_map(kernel_pagetable,KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
+
+  // map kernel data and the physical RAM we'll make use of.
+  user_kernel_pagetable_map(kernel_pagetable,(uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
+
+  // map the trampoline for trap entry/exit to
+  // the highest virtual address in the kernel.
+  user_kernel_pagetable_map(kernel_pagetable,TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+
+  return kernel_pagetable;
+}
 // Switch h/w page table register to the kernel's page table,
 // and enable paging.
 void
@@ -55,7 +81,10 @@ kvminithart()
   w_satp(MAKE_SATP(kernel_pagetable));
   sfence_vma();
 }
-
+// return the kernel page table
+pagetable_t get_original_kernel_pagetable() {
+    return kernel_pagetable;
+}
 // Return the address of the PTE in page table pagetable
 // that corresponds to virtual address va.  If alloc!=0,
 // create any required page-table pages.
@@ -119,6 +148,11 @@ kvmmap(uint64 va, uint64 pa, uint64 sz, int perm)
 {
   if(mappages(kernel_pagetable, va, sz, pa, perm) != 0)
     panic("kvmmap");
+}
+
+void user_kernel_pagetable_map(pagetable_t kpgtbl,uint64 va,uint64 pa,uint64 sz,int perm){
+  if(mappages(kpgtbl, va, sz, pa, perm) != 0)
+    panic("user kernel pagetable map");
 }
 
 // translate a kernel virtual address to
