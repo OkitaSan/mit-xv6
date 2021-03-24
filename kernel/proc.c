@@ -106,7 +106,6 @@ allocproc(void)
 
 found:
   p->pid = allocpid();
-
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     release(&p->lock);
@@ -131,12 +130,16 @@ found:
   uint64 va = KSTACK((int) (p - proc));
   kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
   p->kstack = va;
+  kvminithart();
+  
+  user_kernel_pagetable_map(p->kernel_pagetable,va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+  
+
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
-
   return p;
 }
 
@@ -151,6 +154,11 @@ freeproc(struct proc *p)
   p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
+  if(p->kernel_pagetable){
+    uvmunmap(get_original_kernel_pagetable(),p->kstack,1,1);
+    uvmunmap(p->kernel_pagetable,p->kstack,PGSIZE/PGSIZE,0);
+    free_user_kernel_pagetable(p->kernel_pagetable);
+  }
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -160,6 +168,7 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  
 }
 
 // Create a user page table for a given process,

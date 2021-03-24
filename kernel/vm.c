@@ -48,31 +48,30 @@ kvminit()
 }
 // alloc kernel page table for user process
 pagetable_t get_kernel_pagetable_for_user_proc(){
-  pagetable_t kernel_pagetable = uvmcreate();
+  pagetable_t ukernel_pagetable = uvmcreate();
   // uart registers
-  user_kernel_pagetable_map(kernel_pagetable,UART0, UART0, PGSIZE, PTE_R | PTE_W);
+  user_kernel_pagetable_map(ukernel_pagetable,UART0, UART0, PGSIZE, PTE_R | PTE_W);
 
   // virtio mmio disk interface
-  user_kernel_pagetable_map(kernel_pagetable,VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+  user_kernel_pagetable_map(ukernel_pagetable,VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
 
   // CLINT
-  user_kernel_pagetable_map(kernel_pagetable,CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+  user_kernel_pagetable_map(ukernel_pagetable,CLINT, CLINT, 0x10000, PTE_R | PTE_W);
 
   // PLIC
-  user_kernel_pagetable_map(kernel_pagetable,PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+  user_kernel_pagetable_map(ukernel_pagetable,PLIC, PLIC, 0x400000, PTE_R | PTE_W);
 
   // map kernel text executable and read-only.
-  user_kernel_pagetable_map(kernel_pagetable,KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
+  user_kernel_pagetable_map(ukernel_pagetable,KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
 
   // map kernel data and the physical RAM we'll make use of.
-  user_kernel_pagetable_map(kernel_pagetable,(uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
+  user_kernel_pagetable_map(ukernel_pagetable,(uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
 
   // map the trampoline for trap entry/exit to
   // the highest virtual address in the kernel.
-  user_kernel_pagetable_map(kernel_pagetable,TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
-
-  return kernel_pagetable;
-}
+  user_kernel_pagetable_map(ukernel_pagetable,TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+  return ukernel_pagetable;
+  }
 // Switch h/w page table register to the kernel's page table,
 // and enable paging.
 void
@@ -192,6 +191,7 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
       return -1;
     if(*pte & PTE_V)
       panic("remap");
+
     *pte = PA2PTE(pa) | perm | PTE_V;
     if(a == last)
       break;
@@ -359,6 +359,17 @@ uvmfree(pagetable_t pagetable, uint64 sz)
   if(sz > 0)
     uvmunmap(pagetable, 0, PGROUNDUP(sz)/PGSIZE, 1);
   freewalk(pagetable);
+}
+
+void free_user_kernel_pagetable(pagetable_t user_kernel_pgtbl){
+  uvmunmap(user_kernel_pgtbl,UART0,PGSIZE/PGSIZE,0);
+  uvmunmap(user_kernel_pgtbl,VIRTIO0,PGSIZE/PGSIZE,0);
+  uvmunmap(user_kernel_pgtbl,CLINT,0x10000/PGSIZE,0);
+  uvmunmap(user_kernel_pgtbl,PLIC,0x400000/PGSIZE,0);
+  uvmunmap(user_kernel_pgtbl,KERNBASE,PGROUNDUP((uint64)etext-KERNBASE)/PGSIZE,0);
+  uvmunmap(user_kernel_pgtbl,(uint64)etext,PGROUNDUP(PHYSTOP-(uint64)etext)/PGSIZE,0);
+  uvmunmap(user_kernel_pgtbl,TRAMPOLINE,PGSIZE/PGSIZE,0);
+  freewalk(user_kernel_pgtbl);
 }
 
 // Given a parent process's page table, copy

@@ -179,8 +179,10 @@ int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
 void            vmprint(pagetable_t);
-pagetable_t get_kernel_pagetable_for_user_proc();
-pagetable_t get_original_kernel_pagetable();   
+pagetable_t     get_kernel_pagetable_for_user_proc();
+pagetable_t     get_original_kernel_pagetable();
+void            free_user_kernel_pagetable(pagetable_t user_kernel_pgtbl);
+void            user_kernel_pagetable_map(pagetable_t kpgtbl,uint64 va,uint64 pa,uint64 sz,int perm);
 // plic.c
 void            plicinit(void);
 void            plicinithart(void);
