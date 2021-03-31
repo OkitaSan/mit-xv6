@@ -149,14 +149,18 @@ found:
 static void
 freeproc(struct proc *p)
 {
+  uint64 oldsz = 0;
   if(p->trapframe)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
-  if(p->pagetable)
+  if(p->pagetable){
     proc_freepagetable(p->pagetable, p->sz);
+    oldsz = p->sz;
+  }
   if(p->kernel_pagetable){
     uvmunmap(get_original_kernel_pagetable(),p->kstack,1,1);
     uvmunmap(p->kernel_pagetable,p->kstack,PGSIZE/PGSIZE,0);
+    uvmunmap_kernel_pagetable(p->kernel_pagetable,oldsz,0);
     free_user_kernel_pagetable(p->kernel_pagetable);
   }
   p->pagetable = 0;
@@ -240,8 +244,6 @@ userinit(void)
   // and data into it.
   uvminit(p->pagetable, initcode, sizeof(initcode));
   copy_user_pagetable(p->pagetable,p->kernel_pagetable,PGSIZE);
-  vmprint(p->pagetable);
-  vmprint(p->kernel_pagetable);
   p->sz = PGSIZE;
 
   // prepare for the very first "return" from kernel to user.
@@ -264,11 +266,12 @@ growproc(int n)
   struct proc *p = myproc();
 
   sz = p->sz;
+  uint oldsz = sz;
   if(n > 0){
     if((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0) {
       return -1;
     }
-    copy_grown_pagetable(p->pagetable,p->kernel_pagetable,sz,sz + n);
+    copy_grown_pagetable(p->pagetable,p->kernel_pagetable,oldsz,oldsz + n);
   } else if(n < 0){
     sz = uvmdealloc(p->pagetable, sz, sz + n);
     uvmunmap_kernel_pagetable(p->kernel_pagetable,sz,sz + n);
@@ -298,7 +301,7 @@ fork(void)
     return -1;
   }
 
-  copy_user_pagetable(p->pagetable,p->kernel_pagetable,p->sz);
+  copy_user_pagetable(np->pagetable,np->kernel_pagetable,p->sz);
 
   np->sz = p->sz;
 
@@ -500,10 +503,10 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
-        
-        swtch(&c->context, &p->context);
         w_satp(MAKE_SATP(p->kernel_pagetable));
         sfence_vma();
+        swtch(&c->context, &p->context);
+        
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         w_satp(MAKE_SATP(get_original_kernel_pagetable()));

@@ -188,7 +188,7 @@ void            user_kernel_pagetable_map(pagetable_t kpgtbl,uint64 va,uint64 pa
  * @param process_kernel_pagetable
  * @param va must be page-aligned
  */
-uint64          copyva(pagetable_t user_pagetable,pagetable_t process_kernel_pagetable,uint64 va);
+uint64          copyva(pagetable_t user_pagetable,pagetable_t process_kernel_pagetable,uint64 va,int alloc);
 /** copy the content of grown user pagetable after the call from uvmmalloc
  * @param user_pagetable
  * @param process_kernel_pagetable

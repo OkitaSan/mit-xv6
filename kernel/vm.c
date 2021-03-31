@@ -290,14 +290,10 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
  * @param process_kernel_pagetable
  * @param va must be page-aligned
  */
-uint64 copyva(pagetable_t user_pagetable,pagetable_t process_kernel_pagetable,uint64 va){
-  printf("copyva called\n");
-  pte_t* pte = walk(user_pagetable,va,0);
-  if(pte == 0){
-    printf("panic pte:%p pa:%p\n",pte,PTE2PA(*pte));
-    vmprint(user_pagetable);
+uint64 copyva(pagetable_t user_pagetable,pagetable_t process_kernel_pagetable,uint64 va,int alloc){
+  pte_t* pte = walk(user_pagetable,va,alloc);
+  if(pte == 0)
     panic("This address should exists");
-  }
   if((*pte & PTE_V) == 0)
     panic("PTE should be vaild");
   uint64 pa = PTE2PA(*pte);
@@ -315,12 +311,11 @@ uint64 copyva(pagetable_t user_pagetable,pagetable_t process_kernel_pagetable,ui
  */
 uint64 copy_grown_pagetable(pagetable_t user_pagetable,pagetable_t process_kernel_pagetable,uint64 oldsz,uint64 newsz){
   uint64 a;
-  printf("copy_grown_pagetable called");
   if(newsz < oldsz)
     return oldsz;
   oldsz = PGROUNDUP(oldsz);
   for(a = oldsz;a < newsz;a += PGSIZE){
-    if(copyva(user_pagetable,process_kernel_pagetable,a) != 0){
+    if(copyva(user_pagetable,process_kernel_pagetable,a,0) != 0){
       uvmunmap(process_kernel_pagetable,oldsz,a / PGSIZE,0);
       return -1;
     }
@@ -335,9 +330,8 @@ uint64 copy_grown_pagetable(pagetable_t user_pagetable,pagetable_t process_kerne
  */
 uint64 copy_user_pagetable(pagetable_t user_pagetable,pagetable_t process_kernel_pagetable,uint64 sz){
   uint64 i;
-  printf("copy_user_pagetable called\n");
   for(i = 0;i < sz;i += PGSIZE){
-    if(copyva(user_pagetable,process_kernel_pagetable,i) != 0){
+    if(copyva(user_pagetable,process_kernel_pagetable,i,0) != 0){
       uvmunmap(process_kernel_pagetable,0,i / PGSIZE,0);
       return -1;
     }
@@ -368,7 +362,6 @@ uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 uint64
 uvmunmap_kernel_pagetable(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 {
-  printf("uvmunmap_kernel_pagetable called\n");
   if(newsz >= oldsz)
     return oldsz;
 
