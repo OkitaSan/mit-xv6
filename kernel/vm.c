@@ -285,6 +285,65 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
   return newsz;
 }
 
+/** copy the content from user pagetable to the process's user pagetable
+ * @param user_pagetable
+ * @param process_kernel_pagetable
+ * @param va must be page-aligned
+ */
+uint64 copyva(pagetable_t user_pagetable,pagetable_t process_kernel_pagetable,uint64 va){
+  printf("copyva called\n");
+  pte_t* pte = walk(user_pagetable,va,0);
+  if(pte == 0){
+    printf("panic pte:%p pa:%p\n",pte,PTE2PA(*pte));
+    vmprint(user_pagetable);
+    panic("This address should exists");
+  }
+  if((*pte & PTE_V) == 0)
+    panic("PTE should be vaild");
+  uint64 pa = PTE2PA(*pte);
+  uint flags = PTE_FLAGS(*pte);
+  if(mappages(process_kernel_pagetable,va,PGSIZE,pa,flags&(~PTE_U)) != 0)
+    return -1;
+  return 0;
+}
+
+/** copy the content of grown user pagetable after the call from uvmmalloc
+ * @param user_pagetable
+ * @param process_kernel_pagetable
+ * @param oldsz does not need to be page aligned
+ * @param newsz does not need to be page aligned
+ */
+uint64 copy_grown_pagetable(pagetable_t user_pagetable,pagetable_t process_kernel_pagetable,uint64 oldsz,uint64 newsz){
+  uint64 a;
+  printf("copy_grown_pagetable called");
+  if(newsz < oldsz)
+    return oldsz;
+  oldsz = PGROUNDUP(oldsz);
+  for(a = oldsz;a < newsz;a += PGSIZE){
+    if(copyva(user_pagetable,process_kernel_pagetable,a) != 0){
+      uvmunmap(process_kernel_pagetable,oldsz,a / PGSIZE,0);
+      return -1;
+    }
+  }
+  return newsz;
+}
+
+/** copy the content of user pagetable after call to uvmcopy
+ * @param user_pagetable
+ * @param process_kernel_pagetable
+ * @param sz
+ */
+uint64 copy_user_pagetable(pagetable_t user_pagetable,pagetable_t process_kernel_pagetable,uint64 sz){
+  uint64 i;
+  printf("copy_user_pagetable called\n");
+  for(i = 0;i < sz;i += PGSIZE){
+    if(copyva(user_pagetable,process_kernel_pagetable,i) != 0){
+      uvmunmap(process_kernel_pagetable,0,i / PGSIZE,0);
+      return -1;
+    }
+  }
+  return 0;
+}
 // Deallocate user pages to bring the process size from oldsz to
 // newsz.  oldsz and newsz need not be page-aligned, nor does newsz
 // need to be less than oldsz.  oldsz can be larger than the actual
@@ -302,7 +361,24 @@ uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 
   return newsz;
 }
+// Deallocate user pages in the user kernel pagetable to bring the process size from oldsz to
+// newsz.  oldsz and newsz need not be page-aligned, nor does newsz
+// need to be less than oldsz.  oldsz can be larger than the actual
+// process size.  Returns the new process size.
+uint64
+uvmunmap_kernel_pagetable(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
+{
+  printf("uvmunmap_kernel_pagetable called\n");
+  if(newsz >= oldsz)
+    return oldsz;
 
+  if(PGROUNDUP(newsz) < PGROUNDUP(oldsz)){
+    int npages = (PGROUNDUP(oldsz) - PGROUNDUP(newsz)) / PGSIZE;
+    uvmunmap(pagetable, PGROUNDUP(newsz), npages, 0);
+  }
+
+  return newsz;
+}
 // Recursively free page-table pages.
 // All leaf mappings must already have been removed.
 void
@@ -452,23 +528,7 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 int
 copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
-  uint64 n, va0, pa0;
-
-  while(len > 0){
-    va0 = PGROUNDDOWN(srcva);
-    pa0 = walkaddr(pagetable, va0);
-    if(pa0 == 0)
-      return -1;
-    n = PGSIZE - (srcva - va0);
-    if(n > len)
-      n = len;
-    memmove(dst, (void *)(pa0 + (srcva - va0)), n);
-
-    len -= n;
-    dst += n;
-    srcva = va0 + PGSIZE;
-  }
-  return 0;
+  return copyin_new(pagetable,dst,srcva,len);
 }
 
 // Copy a null-terminated string from user to kernel.
@@ -478,38 +538,5 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 int
 copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 {
-  uint64 n, va0, pa0;
-  int got_null = 0;
-
-  while(got_null == 0 && max > 0){
-    va0 = PGROUNDDOWN(srcva);
-    pa0 = walkaddr(pagetable, va0);
-    if(pa0 == 0)
-      return -1;
-    n = PGSIZE - (srcva - va0);
-    if(n > max)
-      n = max;
-
-    char *p = (char *) (pa0 + (srcva - va0));
-    while(n > 0){
-      if(*p == '\0'){
-        *dst = '\0';
-        got_null = 1;
-        break;
-      } else {
-        *dst = *p;
-      }
-      --n;
-      --max;
-      p++;
-      dst++;
-    }
-
-    srcva = va0 + PGSIZE;
-  }
-  if(got_null){
-    return 0;
-  } else {
-    return -1;
-  }
+  return copyinstr_new(pagetable,dst,srcva,max);
 }

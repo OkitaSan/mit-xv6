@@ -136,7 +136,6 @@ r_medeleg()
   asm volatile("csrr %0, medeleg" : "=r" (x) );
   return x;
 }
-
 static inline void 
 w_medeleg(uint64 x)
 {

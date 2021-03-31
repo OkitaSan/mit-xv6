@@ -183,6 +183,29 @@ pagetable_t     get_kernel_pagetable_for_user_proc();
 pagetable_t     get_original_kernel_pagetable();
 void            free_user_kernel_pagetable(pagetable_t user_kernel_pgtbl);
 void            user_kernel_pagetable_map(pagetable_t kpgtbl,uint64 va,uint64 pa,uint64 sz,int perm);
+/** copy the content from user pagetable to the process's user pagetable
+ * @param user_pagetable
+ * @param process_kernel_pagetable
+ * @param va must be page-aligned
+ */
+uint64          copyva(pagetable_t user_pagetable,pagetable_t process_kernel_pagetable,uint64 va);
+/** copy the content of grown user pagetable after the call from uvmmalloc
+ * @param user_pagetable
+ * @param process_kernel_pagetable
+ * @param oldsz does not need to be page aligned
+ * @param newsz does not need to be page aligned
+ */
+uint64          copy_grown_pagetable(pagetable_t user_pagetable,pagetable_t process_kernel_pagetable,uint64 oldsz,uint64 newsz);
+/** copy the content of user pagetable after call to uvmcopy
+ * @param user_pagetable
+ * @param process_kernel_pagetable
+ * @param sz
+ */
+uint64          copy_user_pagetable(pagetable_t user_pagetable,pagetable_t process_kernel_pagetable,uint64 sz);
+uint64          uvmunmap_kernel_pagetable(pagetable_t pagetable, uint64 oldsz, uint64 newsz);
+// vmcopyin.c
+int             copyin_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len);
+int             copyinstr_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max);
 // plic.c
 void            plicinit(void);
 void            plicinithart(void);
