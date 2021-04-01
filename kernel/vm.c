@@ -56,7 +56,7 @@ pagetable_t get_kernel_pagetable_for_user_proc(){
   user_kernel_pagetable_map(ukernel_pagetable,VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
 
   // CLINT
-  user_kernel_pagetable_map(ukernel_pagetable,CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+  // user_kernel_pagetable_map(ukernel_pagetable,CLINT, CLINT, 0x10000, PTE_R | PTE_W);
 
   // PLIC
   user_kernel_pagetable_map(ukernel_pagetable,PLIC, PLIC, 0x400000, PTE_R | PTE_W);
@@ -192,7 +192,7 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
     if(*pte & PTE_V)
       panic("remap");
 
-    *pte = PA2PTE(pa) | perm | PTE_V;
+      *pte = PA2PTE(pa) | perm | PTE_V;
     if(a == last)
       break;
     a += PGSIZE;
@@ -364,7 +364,7 @@ uvmunmap_kernel_pagetable(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 {
   if(newsz >= oldsz)
     return oldsz;
-
+    
   if(PGROUNDUP(newsz) < PGROUNDUP(oldsz)){
     int npages = (PGROUNDUP(oldsz) - PGROUNDUP(newsz)) / PGSIZE;
     uvmunmap(pagetable, PGROUNDUP(newsz), npages, 0);
@@ -433,7 +433,7 @@ uvmfree(pagetable_t pagetable, uint64 sz)
 void free_user_kernel_pagetable(pagetable_t user_kernel_pgtbl){
   uvmunmap(user_kernel_pgtbl,UART0,PGSIZE/PGSIZE,0);
   uvmunmap(user_kernel_pgtbl,VIRTIO0,PGSIZE/PGSIZE,0);
-  uvmunmap(user_kernel_pgtbl,CLINT,0x10000/PGSIZE,0);
+  // uvmunmap(user_kernel_pgtbl,CLINT,0x10000/PGSIZE,0);
   uvmunmap(user_kernel_pgtbl,PLIC,0x400000/PGSIZE,0);
   uvmunmap(user_kernel_pgtbl,KERNBASE,PGROUNDUP((uint64)etext-KERNBASE)/PGSIZE,0);
   uvmunmap(user_kernel_pgtbl,(uint64)etext,PGROUNDUP(PHYSTOP-(uint64)etext)/PGSIZE,0);

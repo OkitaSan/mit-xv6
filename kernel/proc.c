@@ -130,7 +130,7 @@ found:
   uint64 va = KSTACK((int) (p - proc));
   kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
   p->kstack = va;
-  kvminithart();
+  //kvminithart();
   
   user_kernel_pagetable_map(p->kernel_pagetable,va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
   
@@ -274,7 +274,7 @@ growproc(int n)
     copy_grown_pagetable(p->pagetable,p->kernel_pagetable,oldsz,oldsz + n);
   } else if(n < 0){
     sz = uvmdealloc(p->pagetable, sz, sz + n);
-    uvmunmap_kernel_pagetable(p->kernel_pagetable,sz,sz + n);
+    uvmunmap_kernel_pagetable(p->kernel_pagetable,oldsz,oldsz + n);
   }
   p->sz = sz;
   return 0;
@@ -501,21 +501,19 @@ scheduler(void)
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
-        p->state = RUNNING;
-        c->proc = p;
         w_satp(MAKE_SATP(p->kernel_pagetable));
         sfence_vma();
+        p->state = RUNNING;
+        c->proc = p;
         swtch(&c->context, &p->context);
-        
+        kvminithart();  
         // Process is done running for now.
         // It should have changed its p->state before coming back.
-        w_satp(MAKE_SATP(get_original_kernel_pagetable()));
-        sfence_vma();
         c->proc = 0;
         found = 1;
       }
       release(&p->lock);
-    }
+    }      
 #if !defined (LAB_FS)
     if(found == 0) {
       intr_on();

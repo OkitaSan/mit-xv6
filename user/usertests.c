@@ -318,7 +318,7 @@ void
 truncate3(char *s)
 {
   int pid, xstatus;
-
+  
   close(open("truncfile", O_CREATE|O_TRUNC|O_WRONLY));
   
   pid = fork();
